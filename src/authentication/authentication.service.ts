@@ -1,55 +1,37 @@
-import { HttpService, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { User } from './user.model';
-
-export type AccessToken = string;
-
-interface KeycloakUserInfoResponse {
-    sub: string;
-    email_verified: boolean;
-    name:string;
-    preferred_username: string;
-    given_name: string;
-    family_name: string,
-    email: string;
-}
+import { AUTHENTICATION_STRATEGY_TOKEN, AuthenticationStrategy } from './authentication.strategy';
 
 export class AuthenticationError extends Error {}
 
 @Injectable()
 export class AuthenticationService {
 
-    private readonly baseURL: string;
-    private readonly realm: string;
+    private logger = new Logger(AuthenticationService.name);
 
     constructor(
-        private httpService: HttpService,
-    ) {
-        this.baseURL = process.env.KEYCLOAK_BASE_URL;
-        this.realm = process.env.KEYCLOAK_REALM;
-    }
+        @Inject(AUTHENTICATION_STRATEGY_TOKEN) private readonly strategy: AuthenticationStrategy,
+    ) {}
 
-    /**
-     * Call the OpenId Connect UserInfo endpoint on Keycloak: https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
-     *
-     * If it succeeds, the token is valid and we get the user infos in the response
-     * If it fails, the token is invalid or expired
-     */
-    async authenticate(accessToken: AccessToken): Promise<User> {
-        const url = `${this.baseURL}/realms/${this.realm}/protocol/openid-connect/userinfo`;
-
+    async authenticate(accessToken: string): Promise<User> {
         try {
-            const response = await this.httpService.get<KeycloakUserInfoResponse>(url, {
-                headers: {
-                    authorization: `Bearer ${accessToken}`,
-                },
-            }).toPromise();
+            const userInfos = await this.strategy.authenticate(accessToken);
 
-            return {
-                id: response.data.sub,
-                username: response.data.preferred_username,
+            const user = {
+                id: userInfos.sub,
+                username: userInfos.preferred_username,
             };
+
+            /**
+             * Perform any addition business logic with the user:
+             * - insert user in "users" table on first authentication,
+             * - etc.
+             */
+
+            return user;
         } catch (e) {
+            this.logger.error(e.message, e.stackTrace);
             throw new AuthenticationError(e.message);
         }
     }

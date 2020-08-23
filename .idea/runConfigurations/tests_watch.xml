@@ -1,9 +1,10 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="tests" type="JavaScriptTestRunnerJest">
+  <configuration default="false" name="tests:watch" type="JavaScriptTestRunnerJest">
     <node-interpreter value="project" />
     <node-options value="" />
     <jest-package value="$PROJECT_DIR$/node_modules/jest" />
     <working-dir value="$PROJECT_DIR$" />
+    <jest-options value="--watch" />
     <envs>
       <env name="NODE_ENV" value="test" />
     </envs>
